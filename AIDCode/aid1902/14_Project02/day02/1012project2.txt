@@ -1,0 +1,39 @@
+优化users登录以及跳转功能
+from django.contrib.auth.decorators import login_required#用于登录状态验证
+
+@login_required(login_url='/users/login/')
+def logout(request):
+    ...
+
+在login.html中 form表单添加隐藏域
+<input type="hidden" name="next" value="{{ next }}">
+
+def login(request):
+    if request.user.is_authenticated():
+        return redirect('/')
+
+    if request.method == 'GET':
+        next = request.GET.get('next','')
+        return render(request,'users/login.html',locals())
+
+    else:
+        user_verify = request.POST.get('verify').lower()
+        verify_code = request.session['verifycode'].lower()
+        if user_verify != verify_code:
+            return HttpResponse('验证码错误')
+        username = request.POST.get('username','')
+        password = request.POST.get('password','')
+        if not username or not password:
+            return HttpResponse('用户名或密码不能为空')
+        user = auth.authenticate(request=request,username=username,password=password)
+
+        next = request.POST.get('next','/')
+        
+        if user and user.is_active:
+            auth.login(request,user)
+            print('user:'+user.username+'is login!')
+
+            return redirect(next)
+
+        else:
+            return HttpResponse('登录失败')

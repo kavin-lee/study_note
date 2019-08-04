@@ -1,0 +1,62 @@
+session
+1.添加session
+request.session['key'] = value
+2.获取session
+request.session['key']
+request.session.get('key')
+使用session需要迁移数据库 session的值会保存到数据库中的django_session表
+
+在项目中添加应用demo
+配置模板和路由
+
+在django中修改session配置
+#保存sessionID的时长
+SESSION_COOKIE_AGE = 60*30
+#设置关闭浏览器 session失效(未生效)
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+
+验证码功能实现
+配置路由和模板
+
+ajax_post
+ajax_get
+
+中间件
+process_request
+process_view
+process_reponse
+process_exception
+process_template_response
+以上方法返回一个None或HttpResponse对象
+如果返回None，按django定义的规则继续向后运行
+如果返回HttpResponse对象，直接将该对象返回给用户
+
+中间件的执行流程
+请求到达中间件后 先按照顺序正序执行每个注册过的中间件的process_request方法，如果return值为None 就以依次执行，如果有返回值，就不再继续执行后续的process_request函数，而是去执行对应的中间件的process_response方法，将HttpResponse对象返回给浏览器。
+
+process_request执行完后，匹配路由，然后找到要执行的视图，先执行中间件的process_view，如果process_view返回None，按照顺序继续执行，所有process_view执行完毕后再执行视图函数，如果中间件3返回HttpResponse，从最后一个中间件的process_response方法开始倒序执行
+
+练习 用中间件实现强制某个IP地址只能向/demo/show发五个get请求
+request.META['REMOTE_ADDR']可以得到远程客户端的IP地址
+request.path_info得到客户端访问GET请求的路由信息
+
+class VisitedLimit(MiddlewareMixin):
+    visit_times = {}
+    def process_request(self,request):
+        ip_addr = request.META['REMOTE_ADDR']
+        #判断当前访问的路由是否包含/demo/show 如果不包含，退出中间件函数
+        if not re.match('/demo/show',request.path_info):
+            return
+        #如果包含/demo/show
+        #统计当前IP访问的次数
+        times = self.visit_times.get(ip_addr,0)
+        #将访问次数加一
+        self.visit_times[ip_addr] = times+1
+        #如果次数小于5 可以继续访问 退出中间件
+        if times < 5:
+            return
+        #如果大于5 返回一个HttpResponse对象
+        return HttpResponse('你已经访问'+str(times)+'次，你被拉黑了')
+
+
+文件上传

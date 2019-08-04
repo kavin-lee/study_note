@@ -1,0 +1,389 @@
+股票
+没有价值，有一定价格
+
+Ａ股：人民币普通股，中国境内公司发行，供境内公司组织个人进行以人民币认购和交易的普通股票
+
+Ｂ股：人民币特种股，以人民币标明面值，以外币进行购买和交易，在中国境内交易所上市的交易的外资股
+
+Ｈ股：港股
+
+‘一手’：‘手’是股票交易时最小单位，１００的整数倍
+
+涨跌停：
+
+股票知识
+证券交易所：由证券管理部门批准的。
+
+股票代码：证券交易所给上市公司分配的数字代码
+
+开盘价
+收盘价
+最高价
+最低价
+市盈率
+市净率
+阳线
+阴线
+上影线
+下影线
+
+
+登录，注册，绑定账号（银行卡），充值，提现，自选股，交易，挂单，交易记录，数据展示(KLINES),广告
+
+
+
+建立项目
+django-admin startproject stock
+
+建立app
+python3 manage.py startapp userinfo
+python3 manage.py startapp deal
+python3 manage.py startapp stocks
+python3 manage.py startapp pay
+python3 manage.py startapp analysis
+
+添加urls
+    添加子urls到app
+
+建立mysql数据库
+    mysql -uroot -p123456
+    CREATE DATABASE stock_db DEFAULT CHARSET utf8;
+
+配置settings
+    INSTALLED_APPS = [
+    .......
+    'userinfo',
+    'pay',
+    'stocks',
+    'deal',
+    'analysis',
+    ]
+
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.mysql',
+            'NAME': 'stock_db',
+            'USER': 'root',
+            'PASSWORD':'123456',
+            'HOST':'localhost',
+            'PORT':3306,
+        }
+    }
+
+配置__init__.py
+    import pymysql
+    pymysql.install_as_MySQLdb()
+
+启动项目
+    python3 manage.py runserver 0.0.0.0:8001
+
+models中添加
+    建表
+    用户表UserInfo
+        real_name真实姓名C
+        uemail邮箱EMA
+        uphone手机号C
+        uidentify身份证号C
+
+    银行卡表BankCard
+        bank_name银行名Ic
+        bank_No银行卡号C
+        bank_status卡状态（未激活／激活／冻结／注销）Ic
+        user用户F
+
+    钱包表Wallet
+        money钱D
+        pay_pwd支付密码C
+        user用户O2O
+        frozen_money冻结资金D
+
+    支付记录表PayList
+        money金额D
+        pay_status状态（支出／收入／充值／提现）Ic
+        datetime时间DAT
+        user用户F
+
+    股票表Stock
+        sto_No股票代码C
+        sto_name股票名称C
+        sto_company股票公司C
+        sto_area股票领域Ic
+        sto_update上市时间DAT
+
+    自选股SelfStock
+        user用户F
+        stock股票F
+        is_hold是否持有B
+
+    持仓表HoldStock
+        user用户F
+        stock股票F
+        hold_stock持有数量I
+        frozen_stock冻结I
+
+    挂单BOSStock
+        user用户F
+        price金额D
+        amount数量I
+        datetime挂单时间DAT
+        stock股票F
+        role买卖角色（买／卖）Ic
+
+    交易记录表DealList
+        suser卖家F
+        buser买家F
+        stock股票Ｆ
+        price价格D
+        amount数量I
+        datetime交易时间DAT
+
+    广告表ADList
+        ad_name广告名称C
+        ad_url链接URL
+        ad_img图片IMAGE
+        is_delete是否删除B
+
+settings中配置
+    AUTH_USER_MODEL = 'userinfo.UserInfo'
+
+执行数据库中建表
+    python3 manage.py makemigrations
+    python3 manage.py migrate
+
+
+建表详细代码
+userinfo.models
+
+    BANK_CHOICES = (
+        (0,'ICBC'),
+        (1,'BC'),
+        (2,'CBC'),
+        (3,'ABC'),
+        (4,'CCB'),
+        (5,'ALIPAY'),
+        (6,'WXPAY'),
+    )
+
+    BANK_STATUS_CHOICES = (
+        (0,'未激活'),
+        (1,'激活'),
+        (2,'冻结'),
+        (3,'注销'),
+    )
+
+
+    # Create your models here.
+    class UserInfo(AbstractUser):
+        real_name = models.CharField(verbose_name="真实姓名", max_length=50, null=True)
+        uemail = models.EmailField(verbose_name="邮箱")
+        uphone = models.CharField(verbose_name="手机号", max_length=14, null=True)
+        uidentify = models.CharField(verbose_name="身份证号", max_length=50, null=True)
+
+        def __str__(self):
+            return self.username
+
+        class Meta:
+            # db_table = "user"
+            verbose_name = '用户'
+            verbose_name_plural = verbose_name
+
+    #
+    class BankCard(models.Model):
+        bank_name = models.IntegerField(verbose_name="银行名", choices=BANK_CHOICES, default=0)
+        bank_No = models.CharField(verbose_name="银行卡号", max_length=50, null=True)
+        bank_status = models.IntegerField(verbose_name="卡状态", choices=BANK_STATUS_CHOICES, default=0)
+        user = models.ForeignKey(UserInfo)
+
+        def __str__(self):
+            return self.user.username
+
+        class Meta:
+            verbose_name = "银行卡"
+            verbose_name_plural = verbose_name
+
+
+stocks.models
+    AREA_CHOICES = (
+        (0,'金融'),
+        (1,'IT'),
+        (2,'体育'),
+        (3,'医药'),
+        (4,'教育'),
+        (5,'餐饮'),
+        (6,'娱乐'),
+        (7,'影视'),
+        (8,'房地产'),
+    )
+
+
+    # Create your models here.
+    class Stock(models.Model):
+        sto_No = models.CharField(verbose_name="股票代码", max_length=20, null=True)
+        sto_name = models.CharField(verbose_name="股票名称", max_length=50, null=True)
+        sto_company = models.CharField(verbose_name="股票公司", max_length=200, null=True)
+        sto_area = models.IntegerField(verbose_name="股票领域", choices=AREA_CHOICES, default=0)
+        sto_update = models.DateField(verbose_name="上市时间")
+
+        def __str__(self):
+            return self.sto_No
+
+        class Meta:
+            verbose_name = "股票"
+            verbose_name_plural = verbose_name
+
+    class ADList(models.Model):
+        ad_name = models.CharField(verbose_name="广告名称", max_length=50, null=True)
+        ad_url = models.URLField(verbose_name="链接")
+        ad_img = models.ImageField(verbose_name="图片", upload_to='img/ad', default='normal.png')
+        is_delete = models.BooleanField(verbose_name="是否删除", default=False)
+
+        def __str__(self):
+            return self.ad_name
+
+        class Meta:
+            verbose_name = "广告"
+            verbose_name_plural = verbose_name
+
+pay.models
+    from userinfo.models import UserInfo
+
+
+    PAY_STATUS_CHOICES = (
+        (0,'支出'),
+        (1,'收入'),
+        (2,'充值'),
+        (3,'提现'),
+    )
+    # Create your models here.
+    class PayList(models.Model):
+        money = models.DecimalField(verbose_name="金额", max_digits=8, decimal_places=2)
+        pay_status = models.IntegerField(verbose_name="状态", choices=PAY_STATUS_CHOICES, default=0)
+        datetime = models.DateTimeField(verbose_name="时间", auto_now_add=True)
+        user = models.ForeignKey(UserInfo)
+
+        def __str__(self):
+            return self.user.username
+
+        class Meta:
+            verbose_name = '支付记录'
+            verbose_name_plural= verbose_name
+
+
+deal.models
+    from stocks.models import Stock
+    from userinfo.models import UserInfo
+
+    ROLE_CHOICES = (
+        (0,'买'),
+        (1,'卖'),
+    )
+
+    # Create your models here.
+    class SelfStock(models.Model):
+        user = models.ForeignKey(UserInfo)
+        stock = models.ForeignKey(Stock)
+        is_hold = models.BooleanField(verbose_name="是否持有", default=False)
+
+        def __str__(self):
+            return self.user.username
+
+        class Meta:
+            verbose_name = "自选股"
+            verbose_name_plural = verbose_name
+
+    class BOSStock(models.Model):
+        user = models.ForeignKey(UserInfo)
+        price = models.DecimalField(verbose_name="金额", max_digits=8, decimal_places=2)
+        amount = models.IntegerField(verbose_name="数量")
+        datetime = models.DateTimeField(verbose_name="挂单时间", auto_now_add=True)
+        stock = models.ForeignKey(Stock)
+        role = models.IntegerField(verbose_name="买卖角色", choices=ROLE_CHOICES, default=0)
+
+        def __str__(self):
+            return self.user.username
+
+        class Meta:
+            verbose_name = "挂单表"
+            verbose_name_plural = verbose_name
+
+    class DealList(models.Model):
+        suser = models.ForeignKey(UserInfo, related_name='suser')
+        buser = models.ForeignKey(UserInfo, related_name='buser')
+        stock = models.ForeignKey(Stock)
+        price = models.DecimalField(verbose_name="价格", max_digits=8, decimal_places=2)
+        amount = models.IntegerField(verbose_name="数量")
+        datetime = models.DateTimeField(verbose_name="交易时间", auto_now_add=True)
+
+        def __str__(self):
+            return self.stock.sto_No
+
+        class Meta:
+            verbose_name = "交易记录"
+            verbose_name_plural = verbose_name
+
+
+
+添加jquery
+    建立static文件夹
+    settings配置
+        STATICFILES_DIRS = (
+            os.path.join(BASE_DIR,'static'),
+        )
+
+建立页面
+    建立templates文件夹
+    建立register.html
+    建立front_login.html
+
+主urls中配置显示页面
+    from django.views.generic import TemplateView
+
+    urlpatterns = [
+        ....
+        url(r'front_register/', TemplateView.as_view(template_name="register.html"), name='front_register'),
+    ]
+
+
+
+
+Echarts
+主要用于数据
+echarts使用
+    １下载echarts.min.js
+        官网
+        git clone https://github.com/haominqu/stock.git
+    ２引入echarts.min.js
+        <script src="../static/js/echarts.min.js"></script>
+    ３声明dom节点
+        <div id="main" style="width: 600px;height:400px;"></div>
+    ４dom节点实例化echarts实例
+        var myChart = echarts.init(document.getElementById('main'));
+    5复制相关配置以及数据
+        option = {
+            .......
+        };
+    6生成显示图表
+        myChart.setOption(option);
+
+
+Tushare
+安装
+pip3 install tushare
+
+查看版本
+import tushare
+print(tushare.__version__)
+
+可能出现的错误：
+    １少包或者包冲突：删除卸载重新安装
+    ２pyzmq:1删除pyzmq
+            ２sudo pip3 install tushare --ignore-installed pyzmq
+    3mysql相关,mysql-server mysql-server-5.7:卸载一个
+
+
+tushare使用
+1引入import tushare as ts
+2添加token
+    pro = ts.pro_api('b280312f2903dbec185c07535e9ab3f67df9bfe2220e08e46742b9b5')
+3调用接口方法pro.stock_basic()
+４打印结果

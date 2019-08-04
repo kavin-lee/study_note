@@ -1,0 +1,64 @@
+回顾 休息
+1.在根目录配置首页  修改首页静态文件路径
+
+url(r'^$',views.index),
+
+def index(request):
+    return render(request,'index.html')
+
+
+开发文档
+标题
+项目介绍
+开发人员(组织架构)
+目录
+运行环境 
+需求功能简介
+   买家
+      注册
+      登录
+      商品加入购物车
+      下单
+      支付
+   卖家
+      添加商品
+      编辑商品
+      上下架
+      发货收款
+   管理员
+      添加员工
+      管理信息
+      配置权限
+项目代码模块介绍
+普通用户信息模块 users('/users/')
+卖家           sale
+管理员
+商品信息模块     goods('/goods/’）
+购物车          cart('/cart/')
+验证码          ....
+订单            ...
+
+详细设计
+
+规范
+......
+
+
+
+项目：
+1.用户users部分功能
+通过django内置模块实现用户登录注册等功能
+  首先删除自定义Users
+  删除models中的类 生成迁移文件同步到数据库
+  删除和自定义Users相关的forms.py 在views.py中删除引用
+
+ValueError: The field admin.LogEntry.user was declared with a lazy reference to 'users.user', but app 'users' isn't installed
+需要删除旧的迁移文件 生成新的迁移文件 回滚 
+python3 manage.py makemigrations
+python3 manage.py migrate --fake users zero
+python3 manage.py migrate
+
+django.db.utils.InternalError: (1050, "Table 'django_admin_log' already exists")
+原有的数据库中有django_admin_log，和用户部分内容无关，可以无视
+
+去数据库中查看users_user
